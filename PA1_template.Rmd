@@ -8,18 +8,69 @@ output:
 
 ## Loading and preprocessing the data
 
+```{r, echo=TRUE}
+library("dplyr")
+activity <- tbl_df(data = read.csv("activity.csv"))
+```
+
+
 
 
 ## What is mean total number of steps taken per day?
-
+```{r,echo=TRUE}
+library("reshape2")
+m_activity <- melt(activity,id.vars = c("date","interval"))
+c_activity <- dcast(m_activity, date ~ variable, sum, na.rm = TRUE)
+with(c_activity, hist(steps, breaks = 12))
+steps_mean <- with(c_activity, mean(steps, na.rm = TRUE))
+print(steps_mean)
+steps_median <- with(c_activity, median(steps, na.rm = TRUE))
+print(steps_median)
+```
 
 
 ## What is the average daily activity pattern?
+```{r,echo=TRUE}
+library("lubridate")
+d_activity <- dcast(m_activity, interval ~ variable, mean, na.rm = TRUE)
+d_activity <- mutate(d_activity, interval = parse_date_time(d_activity$interval, order=c("%H:%M","%M")))
+with(d_activity,plot(interval,steps, type = "l"))
+d_activity[d_activity$steps == max(d_activity$steps),]$interval
+```
+
 
 
 
 ## Imputing missing values
 
+```{r, echo=TRUE}
+sum(is.na(activity$steps))
+d_activity <- dcast(m_activity, interval ~ variable, mean, na.rm = TRUE)
+merged_activity <- merge(activity,d_activity, by="interval")
+f_activity <- mutate(merged_activity, steps = ifelse(is.na(steps.x),steps.y,steps.x))
+f_activity <- select(f_activity, c(-steps.x,-steps.y))
+m_activity <- melt(f_activity,id.vars = c("date","interval"))
+c_activity <- dcast(m_activity, date ~ variable, sum, na.rm = TRUE)
+with(c_activity, hist(steps, breaks = 12))
+steps_mean <- with(c_activity, mean(steps, na.rm = TRUE))
+print(steps_mean)
+steps_median <- with(c_activity, median(steps, na.rm = TRUE))
+print(steps_median)
+```
+
+
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r, echo=TRUE}
+w_activity <- mutate(m_activity, weekdays = as.factor(weekdays(parse_date_time(m_activity$date, order=c("%y-%m-%d")))))
+w_activity <- select(w_activity,-date)
+levels(w_activity$weekdays) <- c("weekend","weekdays","weekdays","weekdays","weekdays","weekdays","weekend")
+with(w_activity,plot(interval, value, type="l"))
+
+```
+
+
+
+
